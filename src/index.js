@@ -16,6 +16,7 @@ connectDB()
 })
 
 /*
+10 yo vada agi mongodb connect vako ho.application leh datbse use garera listen garxah
 //1st approach database connection in single module IFEE ---pollute vayo
 import express from "express"
 const app = express()
