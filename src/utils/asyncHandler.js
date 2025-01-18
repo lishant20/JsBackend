@@ -1,10 +1,12 @@
 const asyncHandler = (requestHandler) => {
-  (req, res, next) => {
+  return (req, res, next) => {
     Promise.resolve(requestHandler(req, res, next)).catch((err) => next(err))
   } 
 }
 
 export {asyncHandler}
+//return ni garnuparxah pura ko pura khud ko execute garne hoina
+//accept ni fun rah return ni function i.r promise return
 // db sanga kura vako vai garxah so as wrapper
 // fun pass garne yo method mah ani execute garera wapas dinxa
 // const asyncHandler = (fn) => async (req,res,next) => {
