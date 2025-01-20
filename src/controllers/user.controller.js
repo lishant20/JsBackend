@@ -17,7 +17,7 @@ const registerUser = asyncHandler(async (req,res) => {
 
   //form or json bata data ako xah vane .body Destructure garne
   const {fullName, email, username, password} = req.body
-  console.log('Email: ', email);
+  //console.log('Email: ', email);
 
   //file handle garnah sakinnah data matra sakinxah
   //so routes mah janne
@@ -25,6 +25,7 @@ const registerUser = asyncHandler(async (req,res) => {
   // if(fullName === "") {
   //   throw new ApiError(400, "fullname is required")
   // }
+  //empty xah ki nai
   if(
     [fullName, email, username, password].some((field) => 
     field?.trim() === "")
@@ -34,7 +35,7 @@ const registerUser = asyncHandler(async (req,res) => {
   //user already exists?-user.model-db sanga direct contact garxah
   //bcoz mongoose leh model create gareko ho.Aba user nai hamro behalf mah call 
   //garxah mongodb lai(any number of time)
-  const existedUser = User.findOne({
+  const existedUser = await User.findOne({
     $or: [{ username },{ email }]
   })
 
@@ -42,10 +43,17 @@ const registerUser = asyncHandler(async (req,res) => {
     throw new ApiError(409, "User with email or username already exists")
   }
 
+  //console.log(req.files);
+
   //img and avater xah ki nai req.body-express req.files-multer
   const avatarLocalPath = req.files?.avatar[0]?.path;
-  const coverImageLocalPath = req.files?.coverImage[0]?.path;
+  //const coverImageLocalPath = req.files?.coverImage[0]?.path;
   //localPath kinah vane yo server mah xah cloudinary mah gako xainah
+
+  let coverImageLocalPath;
+  if(req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0) {
+    coverImageLocalPath = req.files.coverImage[0].path
+  }
 
   if(!avatarLocalPath) {
     throw new ApiError(400,"Avatar file is required")
