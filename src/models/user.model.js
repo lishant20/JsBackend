@@ -1,6 +1,6 @@
 import mongoose, {Schema} from "mongoose";
 import jwt from "jsonwebtoken";
-import bcrypt from "bcrypt"
+import bcrypt from "bcrypt";
 
 const userSchema = new Schema(
   {
@@ -81,9 +81,9 @@ userSchema.methods.generateRefreshToken = function(){
     {
       _id: this._id,
     },
-    process.env.ACCESS_REFRESH_SECRET,
+    process.env.REFRESH_TOKEN_SECRET,
     {
-      expiresIn: process.env.ACCESS_REFRESH_EXPIRY
+      expiresIn: process.env.REFRESH_TOKEN_EXPIRY
     }
   )
 }
