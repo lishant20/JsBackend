@@ -197,7 +197,7 @@ const refreshAccessToken = asyncHandler(async(req, res) => {
   //req.body.refreshToken mobile app use garda   
   const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
 
-  if(incomingRefreshToken) {
+  if(!incomingRefreshToken) {
     throw new ApiError(401, "unauthorized request")
   }
   //incomingRefreshToken -> decodedToken
@@ -249,9 +249,133 @@ const refreshAccessToken = asyncHandler(async(req, res) => {
   }
 })
 
+const changeCurrentPassword = asyncHandler(async(req,res) => {
+  const {oldPassword, newPassword} = req.body
+  //confirm password ni garnah minxah
+  //pw change garnah logged ni xah using authmiddleware(chalxah)
+  //so confirm xah req.user mah user xah
+  
+  const user = await User.findById(req.user?._id)
+  //true or false value milxah
+  const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
+
+  if(!isPasswordCorrect) {
+    throw new ApiError(400, "Invalid old password")
+  }
+
+  //new password set
+  user.password = newPassword
+  await user.save({validateBeforeSave: false})
+
+  return res
+  .status(200)
+  .json(new ApiResponse(200, {}, "Password changed successfully"))
+})
+
+//data mah req.user kina? req mah middleware run vaisako aba
+//tesma user inject vaisako object mah
+const getCurrentUser = asyncHandler(async(req,res) => {
+  return res
+  .status(200)
+  .json(200, req.user, "Current user fetched successfully")
+})
+
+//text based data lai update garne
+const updateAccountDetails = asyncHandler(async(req,res) => {
+  const {fullName, email} = req.body
+  //file upload garaunah arko controller mah garne End point
+  //better approach
+  if(!fullName || !email) {
+    throw new ApiError(400, "All fields are required")
+  }
+
+  const user = User.findByIdAndUpdate(
+    req.user?._id,   //query
+    {
+      $set: {
+        fullName,
+        email,
+      }
+    },
+    {new: true}  //update paxi ko information return hunxa
+  ).select("-password")
+
+  return res
+  .status(200)
+  .json(new ApiResponse(200, user, "Account details updated successfully"))
+})
+
+const updateUserAvatar = asyncHandler(async(req, res) => {
+  const avatarLocalPath = req.file?.path 
+  //local mah multer leh upload garxah
+  //aba cloudinary mah upload garnu xainah vanye yeslai db mah save
+  if(!avatarLocalPath) {
+    throw new ApiError(400, "Avatar file is missing")
+  }
+
+  const avatar = await uploadOnCloudinary(avatarLocalPath)
+
+  if(!avatar.url){
+    throw new ApiError(400, "Error while uploading on avatar")
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set: {
+        avatar: avatar.url
+      }
+    },
+    {new: true}
+  ).select("-password")
+  //refrence liyera response pathaunu parxa
+  //reponse pathauna user =
+  //avatar = avatar.url thumnail mah string xah so 
+  //avatar = avatar pass garda purai object pass hunxa
+  return res
+  .status(200)
+  .json(
+    new ApiResponse(200, user, "Avatar updated successfully")
+  )
+})
+
+const updateUserCoverImage = asyncHandler(async(req,res) => {
+  const coverImageLocalPath = req.file?.path
+
+  if(!coverImageLocalPath) {
+    throw new ApiError(400, "Cover Image file is missing")
+  }
+
+  const coverImage = await uploadOnCloudinary(coverImageLocalPath)
+
+  if(!coverImage.url) {
+    throw new ApiError(400, "Error while uploading on cover image")
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set: {
+        coverImage: coverImage.url
+      }
+    },
+    {new: true}
+  ).select("-password")
+
+  return res
+  .status(200)
+  .json(
+    new ApiResponse(200, user, "Cover image updated successfully")
+  )
+})
 export {
   registerUser,
   loginUser,
   logoutUser,
-  refreshAccessToken
+  refreshAccessToken,
+  changeCurrentPassword, 
+  getCurrentUser,
+  updateAccountDetails,
+  updateUserAvatar,
+  updateUserCoverImage
 }
