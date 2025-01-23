@@ -393,14 +393,16 @@ const getUserChannelProfile = asyncHandler(async(req,res) => {
         username: username?.toLowerCase()
       }
     },
+    //malai kati leh subscribe gareko xah
     {
       $lookup: {
-        from: "subscriptions",
+        from: "subscriptions", // Name of the collection to join with.
         localField: "_id",
-        foreignField: "channel",
+        foreignField: "channel", //channel select garego vane subscribers milxa 
         as: "subscribers"
       }
     },
+    //maile kati lai subscribe gareko xu
     {
       $lookup: {
         from: "subscriptions",
@@ -409,23 +411,28 @@ const getUserChannelProfile = asyncHandler(async(req,res) => {
         as: "subscribedTo"
       }
     },
+    //addFields:
+    //afno values rakhxah rakhxah + additional field ni add garxah
+    //so that autai object mah sara data pathaune
     {
       $addFields: {
         subscribersCount: {
-          $size: "$subscribers"
+          $size: "$subscribers" //pipeline mah sabai document xah tesko count
         },
         channelsSubscribedToCount: {
           $size: "subscribedTo"
         },//duita info aja add gareko document mah users modelmah
+        //subscribe subscribed dekhauna ko lagi frontend wala lai true/false pathaune
         isSubscribed: {
           $cond: {
-            if: {$in: [req.user?._id, "$subscribers.subsciber"]},
+            if: {$in: [req.user?._id, "$subscribers.subscriber"]},
             then: true,
             else: false
           }
         }
       }
     },
+    //sabai value ko satta selected kura matra pathaune jah demand xah
     {
       $project: {
         fullName: 1,
@@ -440,6 +447,7 @@ const getUserChannelProfile = asyncHandler(async(req,res) => {
     }
   ])
 
+  //first nai xainah vane error pathaune
   if(!channel?.length) {
     throw new ApiError(404, "channel doesnot exists")
   }
@@ -448,6 +456,67 @@ const getUserChannelProfile = asyncHandler(async(req,res) => {
   .status(200)
   .json(
     new ApiResponse(200, channel[0], "User channel fetched successfully")
+  )
+})
+
+const getWatchHistory = asyncHandler(async(req,res) => {
+  //req.user._id bata string milxah ani mongoose ko through directly pass garinxah
+  //_id = ObjectId('string') mah string mongodb ko id hoinah
+  // id chahida purah ObjectId('string') yo chahinxah
+  //tara moongoose leh automatically convert garxa mongodb ko object mah
+  const user = await User.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(req.user._id)
+      } // yaha mongoose kam gardainah aggregatuion pipeline ko code directly
+      //janxa so mongoose.Types.ObjectId use garne string mah
+      //document id match garxah object id sanga
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "watchHistory",
+        foreignField: "_id",
+        as: "watchHistory",
+        pipeline: [
+          {
+            $lookup: {
+              from: "users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "owner",
+              pipeline: [
+                {
+                  $project: {
+                    fullName: 1,
+                    username: 1,
+                    avatar: 1
+                  }//owner field mah janxah.Sabai chaidainah chyeko matra
+                }
+              ]
+            }
+          },
+          {
+            //owner field mah data xah..array auxah jasma 
+            // loop layerah calue nikalnu parxah or first value mah projection data hunxa
+            //array lai sudharnah frontend ko lagi
+            //existing field nai overwrite garnah owner: {}
+            //arrElment or first use garnah milah
+            $addFields: {
+              owner: {
+                $first: "$owner"//field bata nikalnah $ object milxah jasmah . garera value niklinxah 
+              }//user lai easy banxah
+            }
+          }
+        ]
+      }//deharai videos document watchHistory mah ayo
+    }
+  ])
+
+  return res
+  .status(200)
+  .json(
+    new ApiResponse(200, user[0].watchHistory, "Watch history fetched successfully")
   )
 })
 
@@ -460,5 +529,7 @@ export {
   getCurrentUser,
   updateAccountDetails,
   updateUserAvatar,
-  updateUserCoverImage
+  updateUserCoverImage,
+  getUserChannelProfile,
+  getWatchHistory
 }
