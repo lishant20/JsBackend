@@ -6,8 +6,8 @@ const subcriptionSchema  = new Schema({
     ref: "User"
   },
   channel: {
-      type: Schema.Types.ObjectId, //one to whom 'subscriber' is subscribing
-      ref: "User"
+    type: Schema.Types.ObjectId, //one to whom 'subscriber' is subscribing
+    ref: "User"
   }
 },{timestamps: true})
 //user ko profile display gardah problem aunah sakxah

@@ -277,7 +277,11 @@ const changeCurrentPassword = asyncHandler(async(req,res) => {
 const getCurrentUser = asyncHandler(async(req,res) => {
   return res
   .status(200)
-  .json(200, req.user, "Current user fetched successfully")
+  .json(new ApiResponse(
+    200, 
+    req.user, 
+    "Current user fetched successfully"
+  ))
 })
 
 //text based data lai update garne
@@ -289,7 +293,7 @@ const updateAccountDetails = asyncHandler(async(req,res) => {
     throw new ApiError(400, "All fields are required")
   }
 
-  const user = User.findByIdAndUpdate(
+  const user = await User.findByIdAndUpdate(
     req.user?._id,   //query
     {
       $set: {
@@ -319,6 +323,7 @@ const updateUserAvatar = asyncHandler(async(req, res) => {
     throw new ApiError(400, "Error while uploading on avatar")
   }
 
+  //todo delete old image
   const user = await User.findByIdAndUpdate(
     req.user?._id,
     {
@@ -368,6 +373,84 @@ const updateUserCoverImage = asyncHandler(async(req,res) => {
     new ApiResponse(200, user, "Cover image updated successfully")
   )
 })
+
+const getUserChannelProfile = asyncHandler(async(req,res) => {
+  //channel profile chahida URL mah janxum so req.params
+  const {username} = req.params
+  
+  if(!username?.trim()) {
+    throw new ApiError(400,"Username is missing")
+  }
+
+  //username bata document find garne query chalayera
+  //User.find({username}) dababase bata user line ani tesko bases
+  //mah aggregation pipeline launu vanda direct nai aggregation launa milxa
+  //using match field sabai bata 1 document find garxah so saving garnah
+  //aggregate returns array mah multiple value
+  const channel = await User.aggregate([
+    {
+      $match: {
+        username: username?.toLowerCase()
+      }
+    },
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "channel",
+        as: "subscribers"
+      }
+    },
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "subscriber",
+        as: "subscribedTo"
+      }
+    },
+    {
+      $addFields: {
+        subscribersCount: {
+          $size: "$subscribers"
+        },
+        channelsSubscribedToCount: {
+          $size: "subscribedTo"
+        },//duita info aja add gareko document mah users modelmah
+        isSubscribed: {
+          $cond: {
+            if: {$in: [req.user?._id, "$subscribers.subsciber"]},
+            then: true,
+            else: false
+          }
+        }
+      }
+    },
+    {
+      $project: {
+        fullName: 1,
+        username: 1,
+        subscribersCount: 1,
+        channelsSubscribedToCount: 1,
+        isSubscribed: 1,
+        avatar: 1,
+        coverImage: 1,
+        email: 1
+      }
+    }
+  ])
+
+  if(!channel?.length) {
+    throw new ApiError(404, "channel doesnot exists")
+  }
+
+  return res
+  .status(200)
+  .json(
+    new ApiResponse(200, channel[0], "User channel fetched successfully")
+  )
+})
+
 export {
   registerUser,
   loginUser,
