@@ -170,8 +170,8 @@ const logoutUser = asyncHandler(async(req,res) => {
   await User.findByIdAndUpdate(
     req.user._id,
     {
-      $set: {
-        refreshToken: undefined
+      $unset: {
+        refreshToken: 1 //this removes the field from the document
       }
     },
     {
@@ -249,6 +249,7 @@ const refreshAccessToken = asyncHandler(async(req, res) => {
   }
 })
 
+//CRUD operation
 const changeCurrentPassword = asyncHandler(async(req,res) => {
   const {oldPassword, newPassword} = req.body
   //confirm password ni garnah minxah
